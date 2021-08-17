@@ -183,7 +183,75 @@ gulp.task("default", ["copy-html"], function () {
 
 注意，我们为Broswerify指定了debug: true。 这会让 tsify在输出文件里生成source maps。 source maps允许我们在浏览器中直接调试TypeScript源码，而不是在合并后的JavaScript文件上调试。 你要打开调试器并在 main.ts里打一个断点，看看source maps是否能工作。 当你刷新页面时，代码会停在断点处，从而你就能够调试 greet.ts。
 
+### Watchify，Babel和Uglify
+现在代码已经用Browserify和tsify捆绑在一起了，我们可以使用Browserify插件为构建添加一些特性。
 
+Watchify启动Gulp并保持运行状态，当你保存文件时自动编译。 帮你进入到编辑-保存-刷新浏览器的循环中。
+
+Babel是个十分灵活的编译器，将ES2015及以上版本的代码转换成ES5和ES3。 你可以添加大量自定义的TypeScript目前不支持的转换器。
+
+Uglify帮你压缩代码，将花费更少的时间去下载它们。
+
+#### Watchify
+我们启动Watchify，让它在后台帮我们编译：
+```
+npm install --save-dev watchify gulp-util
+```
+修改gulpfile文件如下：
+
+```js
+var gulp = require('gulp');
+var browserify = require("browserify");
+var source = require('vinyl-source-stream');
+var watchify = require('watchify');
+var tsify = require('tsify');
+var gutil = require('gulp-util');
+var paths = {
+  pages: ['src/*.html']
+}
+var watchedBrowserify = watchify(browserify({
+  basedir: '.',
+  debug: true,
+  entries: ['src/main.ts'],
+  cache: {},
+  packageCache: {}
+}).plugin(tsify));
+gulp.task('copy-html', function () {
+  return gulp.src(paths.pages)
+  .pipe(gulp.dest('dist'))
+})
+
+function bundle() {
+  return watchedBrowserify
+  .bundle()
+  .on('error', gutil.log)
+  .pipe(source('bundle.js'))
+  .pipe(gulp.dest('dist'))
+}
+
+gulp.task("default",gulp.series(gulp.parallel("copy-html"), bundle));
+watchedBrowserify.on('update', bundle);
+watchedBrowserify.on('log', gutil.log);
+```
+共有三处改变，但是需要你略微重构一下代码。
+
+将browserify实例包裹在watchify的调用里，控制生成的结果。
+调用watchedBrowserify.on("update", bundle);，每次TypeScript文件改变时Browserify会执行bundle函数。
+调用watchedBrowserify.on("log", gutil.log);将日志打印到控制台。
+(1)和(2)在一起意味着我们要将browserify调用移出default任务。 然后给函数起个名字，因为Watchify和Gulp都要调用它。 (3)是可选的，但是对于调试来讲很有用。
+
+现在当你执行gulp，它会启动并保持运行状态。 试着改变 main.ts文件里showHello的代码并保存。 你会看到这样的输出：
+```bash
+proj$ gulp
+[14:08:00] Using gulpfile ~/Documents/practice/type-script/gulpfile.js
+[14:08:00] Starting 'default'...
+[14:08:00] Starting 'copy-html'...
+[14:08:00] Finished 'copy-html' after 23 ms
+[14:08:00] Starting 'bundle'...
+[14:08:02] 2927 bytes written (0.06 seconds)
+[14:08:02] Finished 'bundle' after 1.78 s
+
+```
 
 ## gulp 错误问题解决
 **********注意************

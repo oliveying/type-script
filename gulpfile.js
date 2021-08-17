@@ -7,8 +7,6 @@ var gutil = require('gulp-util');
 var paths = {
   pages: ['src/*.html']
 }
-// var ts = require('gulp-typescript');
-// var tsProject = ts.createProject("tsconfig.json");
 var watchedBrowserify = watchify(browserify({
   basedir: '.',
   debug: true,
@@ -24,10 +22,11 @@ gulp.task('copy-html', function () {
 function bundle() {
   return watchedBrowserify
   .bundle()
+  .on('error', gutil.log)
   .pipe(source('bundle.js'))
   .pipe(gulp.dest('dist'))
 }
 
-gulp.task("default",gulp.series("copy-html"), bundle);
+gulp.task("default",gulp.series(gulp.parallel("copy-html"), bundle));
 watchedBrowserify.on('update', bundle);
 watchedBrowserify.on('log', gutil.log);
