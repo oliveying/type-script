@@ -1,7 +1,8 @@
 import { sayHello } from './greet';
 console.log(sayHello('typescript'));
 
-function hello(compiler: string) {
-  console.log('hello ' + compiler);
+function showHello(divName: string, name: string) {
+  const elt = document.getElementById(divName);
+  elt.innerText = sayHello(name);
 }
-hello('typescript');
+showHello('greeting','typescript');
