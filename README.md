@@ -252,6 +252,109 @@ proj$ gulp
 [14:08:02] Finished 'bundle' after 1.78 s
 
 ```
+### Uglify
+首先安装Uglify。 因为Uglify是用于混淆你的代码，所以我们还要安装vinyl-buffer和gulp-sourcemaps来支持sourcemaps。
+```
+npm install --save-dev gulp-uglify vinyl-buffer gulp-sourcemaps
+```
+修改gulpfile文件如下：
+```js
+var gulp = require('gulp');
+var browserify = require("browserify");
+var source = require('vinyl-source-stream');
+var watchify = require('watchify');
+var tsify = require('tsify');
+var uglify = require('gulp-uglify');
+var sourcemaps = require('gulp-sourcemaps');
+var buffer = require('vinyl-buffer');
+var gutil = require('gulp-util');
+var paths = {
+  pages: ['src/*.html']
+}
+gulp.task('copy-html', function () {
+  return gulp.src(paths.pages)
+  .pipe(gulp.dest('dist'))
+})
+
+gulp.task("default",gulp.parallel("copy-html"), function () {
+  return browserify({
+    basedir: '.',
+    debug: true,
+    entries: ['src/main.ts'],
+    cache: {},
+    packageCache: {}
+  }).plugin(tsify)
+  .bundle()
+  .pipe(source('bundle.js'))
+  .pipe(buffer())
+  .pipe(sourcemaps.init({loadMaps: true}))
+  .pipe(uglify())
+  .pipe(sourcemaps.write('./'))
+  .pipe(gulp.dest('dist'));
+});
+```
+注意uglify只是调用了自己—buffer和sourcemaps的调用是用于确保sourcemaps可以工作。 这些调用让我们可以使用单独的sourcemap文件，而不是之前的内嵌的sourcemaps。 你现在可以执行 gulp来检查bundle.js是否被压缩了：
+```
+gulp
+cat dist/bundle.js
+```
+
+### Babel
+首先安装Babelify和ES2015的Babel预置程序。 和Uglify一样，Babelify也会混淆代码，因此我们也需要vinyl-buffer和gulp-sourcemaps。 默认情况下Babelify只会处理扩展名为 .js，.es，.es6和.jsx的文件，因此我们需要添加.ts扩展名到Babelify选项。
+```
+npm install --save-dev babelify babel-core babel-preset-es2015 vinyl-buffer gulp-sourcemaps
+```
+修改gulpfile文件如下：
+```js
+var gulp = require('gulp');
+var browserify = require('browserify');
+var source = require('vinyl-source-stream');
+var tsify = require('tsify');
+var sourcemaps = require('gulp-sourcemaps');
+var buffer = require('vinyl-buffer');
+var paths = {
+    pages: ['src/*.html']
+};
+
+gulp.task('copyHtml', function () {
+    return gulp.src(paths.pages)
+        .pipe(gulp.dest('dist'));
+});
+
+gulp.task('default', ['copyHtml'], function () {
+    return browserify({
+        basedir: '.',
+        debug: true,
+        entries: ['src/main.ts'],
+        cache: {},
+        packageCache: {}
+    })
+    .plugin(tsify)
+    .transform('babelify', {
+        presets: ['es2015'],
+        extensions: ['.ts']
+    })
+    .bundle()
+    .pipe(source('bundle.js'))
+    .pipe(buffer())
+    .pipe(sourcemaps.init({loadMaps: true}))
+    .pipe(sourcemaps.write('./'))
+    .pipe(gulp.dest('dist'));
+});
+```
+我们需要设置TypeScript目标为ES2015。 Babel稍后会从TypeScript生成的ES2015代码中生成ES5。 修改 tsconfig.json:
+
+{
+    "files": [
+        "src/main.ts"
+    ],
+    "compilerOptions": {
+        "noImplicitAny": true,
+        "target": "es2015"
+    }
+}
+对于这样一段简单的代码来说，Babel的ES5输出应该和TypeScript的输出相似。
+
 
 ## gulp 错误问题解决
 **********注意************
