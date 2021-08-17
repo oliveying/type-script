@@ -1,12 +1,10 @@
 var gulp = require('gulp');
 var browserify = require("browserify");
 var source = require('vinyl-source-stream');
-var watchify = require('watchify');
 var tsify = require('tsify');
 var uglify = require('gulp-uglify');
 var sourcemaps = require('gulp-sourcemaps');
 var buffer = require('vinyl-buffer');
-var gutil = require('gulp-util');
 var paths = {
   pages: ['src/*.html']
 }
@@ -23,6 +21,10 @@ gulp.task("default",gulp.parallel("copy-html"), function () {
     cache: {},
     packageCache: {}
   }).plugin(tsify)
+  .transform('babelify', {
+    presets: ['es2015'],
+    extensions: ['.ts']
+})
   .bundle()
   .pipe(source('bundle.js'))
   .pipe(buffer())
